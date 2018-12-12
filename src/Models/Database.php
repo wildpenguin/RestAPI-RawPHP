@@ -3,9 +3,8 @@
  * Implement MySQL database queries
  */
 
-namespace API;
+namespace API\Models;
 
-$config = include('.config.php');
 
 class Database 
 {
@@ -23,21 +22,18 @@ class Database
             return $this->conn;
         }
         // these needs to be moved to a separate config file
-        $this->host = 'localhost';
-        $this->db_name = 'restapi';
-        $this->username = 'user1';
+        $this->username = 'db_user';
         $this->password = 'abc123';
     
         try {
-            $this->conn = new PDO("mysql:host=" . $this->host . ";dbname=" . $this->db_name, $this->username, $this->password);
+            $this->conn = new \PDO("mysql:unix_socket=/Applications/MAMP/tmp/mysql/mysql.sock;dbname=restapi", $this->username, $this->password);
             $this->conn->exec("set names utf8");
-        } catch (PDOException $exception) {
+        } catch (\PDOException $exception) {
             echo "Connection error: " . $exception->getMessage();
         }
- 
+       
         return $this->conn;
     }
-
     
 }
 ?>

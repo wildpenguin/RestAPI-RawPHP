@@ -8,7 +8,8 @@ namespace API;
 
 use API\Models\TodoList;
 use API\Models\TodoItem;
-
+use API\Models\Users;
+use API\Models\isRestful;
 
 class App
 {
@@ -38,19 +39,20 @@ class App
             $this->render(200, ['message'=> 'To interact with API, please request these resourses: /todo or /item']);
         }
 
-        $resource = $this->parseResourceName($request['resource']);
-        if (!$resource) {
+        $resource = $this->parseResourceName($request->resource);
+        if (!$resource || !($resource instanceof isRestful)) {
             $this->render(404, ['message'=> 'Resource not found, please request these resourses: /todo or /item']);
         }
 
         $result = [];
         try {
-            switch ($request['method']) {
+            switch ($request->method) {
                 case 'GET':
                     $result = $resource->view($request);
                     break;
                 case 'POST':
-                    $result = $resource->create($request, $_POST['data']??[]);
+                    $params = (array) json_decode(file_get_contents('php://input'), TRUE); // the only way to send json from Postman
+                    $result = $resource->create($request, $params);
                     break;
                 case 'PUT':
                     $result = $resource->update($request, $_POST['data']??[]);
@@ -71,9 +73,9 @@ class App
     /**
      * Searches the _SERVER for requested resources
      * 
-     * @return array
+     * @return stdObject
      */
-    protected function parseUrl() : array
+    protected function parseUrl()
     {
         $requestMethod = $_SERVER["REQUEST_METHOD"] ?? []; //GET, POST, PUT, DELETE
         $path = $_SERVER['PATH_INFO'] ?? [];
@@ -84,7 +86,7 @@ class App
         }
         $path = explode('/', substr($path, 1)); // remove first slash
 
-        return [
+        return (object) [
             'method' => $requestMethod, 
             'resource' => $path[0] ?? '',
             'id' => $path[1] ?? '',
@@ -140,14 +142,9 @@ class App
             echo 'Text to send if user hits Cancel button';
             exit;
         }
-        // in a very simplified way
-        if (
-            'apiuser' === $_SERVER['PHP_AUTH_USER'] && 
-            'abc123' === $_SERVER['PHP_AUTH_PW']
-        ) {
-            return true;
-        }
-        return false;
+       
+        $users = new Users();
+        return $users->isAuthenticated($_SERVER['PHP_AUTH_USER'], $_SERVER['PHP_AUTH_PW']);
 }
 
     

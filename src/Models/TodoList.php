@@ -13,51 +13,83 @@ class TodoList extends Database implements isRestful
 {
     private $id;
     private $name;
-    private $user;
+    private $userId;
+    private $conn;
 
     public function __construct()
     {
         $this->conn = $this->getConnection();
     }
-
-    public function getId()
+    /**
+     * Display all lists for current user
+     * @return array
+     */
+    public function viewAll($request)
     {
-        return $this->id;
+        $sql = <<< SQL
+        SELECT l.id, l.name FROM todoList l 
+        JOIN apiUsers u ON (l.userId=u.id) 
+        WHERE u.user=:user
+SQL;
+        $query = $this->conn->prepare($sql);
+        $query->execute([':user' => $request->user]);
+
+        $data = $query->fetchAll();
+       
+        return count($data) > 0 ? $data : 'Empty list';
     }
     
-    public function getName()
-    {
-        return $this->name;
-    }
-
-    public function getUser()
-    {
-        return $user;
-    }
-
-    public function viewAll()
-    {
-        $query = $this->conn->prepare('SELECT id, name, user FROM todoList WHERE user=:user');
-        $data = $query->execute($request['user']);
-
-        return $data->fetchAll();
-    }
-    
+    /**
+     * View specific list by Id
+     * @return array
+     */
     public function view($request)  
     {
-        if (empty($id)) {
-            $this->viewAll();
+        if (empty($request->id)) {
+            return $this->viewAll($request);
         }
         
-        $query = $this->conn->prepare('SELECT id, name, user FROM todoList WHERE id=:id and user=:user');
-        $data = $query->execute([$id, $user]);
+        $sql = <<< SQL
+        SELECT id, name, user FROM todoList l
+        JOIN todoItem i ON (i.listId=l.id)
+        JOIN apiUsers u ON (u.id=l.userId)
+        WHERE id=:id and user=:user
+SQL;
+        $query = $this->conn->prepare($sql);
+        $query->execute([':id' => $request->id, ':user' => $request->user]);
 
-        return $data->fetchAll();
+        return $query->fetchAll();
     }
 
-    public function create($data) {
-        return 'create';
+    /**
+     * Create a new Todo List
+     * @return array status and list Id
+     */
+    public function create($request, $params) {
+       $data = $params['data'];
+        if (!$data['name']) {
+            throw new \Exception('Missing name from TodoList!');
+        }
+        $sql = <<< SQL
+        INSERT IGNORE INTO todoList (name, userId) 
+        VALUES (:name, (SELECT id FROM apiUsers WHERE user=:user))
+SQL;
+        try {
+            $query = $this->conn->prepare($sql);
+            $query->execute([':name' => $data['name'], ':user' => $request->user]);
+
+            return [
+                'status' => 'OK', 
+                //'id' => $this->conn->lastInsertId
+            ];
+        } catch (\PDOException $e) {
+            return [
+                'status' => 'ERROR',
+                'error' => $e->getMessage()
+            ];
+        }
     }
+
     public function update($request, $data) {
         return 'update';
     }

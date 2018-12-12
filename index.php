@@ -16,7 +16,7 @@ $loader->register();
 // register the base directories for the namespace prefix
 $loader->addNamespace('API', 'src');
 
-$config = include('.config.php');
+$config = parse_ini_file('.config');
 $app = new App($config);
 $app->start();
 
