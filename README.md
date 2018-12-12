@@ -17,7 +17,8 @@ POST localhost:1051/todo with JSON block
 ```
 Example GET request:
 
-```GET localhost:1051/todo
+```
+GET localhost:1051/todo
 {
     "message": [
         {
